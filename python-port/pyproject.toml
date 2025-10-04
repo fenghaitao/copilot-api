@@ -35,7 +35,7 @@ dependencies = [
     "tiktoken>=0.5.0",
     "aiofiles>=23.0.0",
     "python-multipart>=0.0.6",
-    "pytest>=7.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +47,11 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.0.0",
     "types-requests>=2.31.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
 ]
 
 [project.urls]
