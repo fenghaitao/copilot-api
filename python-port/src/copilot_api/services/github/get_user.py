@@ -11,9 +11,17 @@ from ...lib.error import HTTPError
 async def get_github_user() -> Dict[str, Any]:
     """Get current GitHub user information."""
     async with httpx.AsyncClient() as client:
+        # Use standard GitHub API headers without the newer API version
+        headers = {
+            "content-type": "application/json",
+            "accept": "application/json",
+            "authorization": f"token {state.github_token}",
+            "user-agent": "GitHubCopilotChat/0.26.7",
+        }
+        
         response = await client.get(
             f"{GITHUB_API_BASE_URL}/user",
-            headers=github_headers(state),
+            headers=headers,
         )
         
         if not response.is_success:

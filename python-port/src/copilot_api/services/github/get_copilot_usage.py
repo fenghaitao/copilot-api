@@ -12,7 +12,7 @@ async def get_copilot_usage() -> Dict[str, Any]:
     """Get Copilot usage statistics from GitHub."""
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{GITHUB_API_BASE_URL}/copilot/usage",
+            f"{GITHUB_API_BASE_URL}/copilot_internal/user",
             headers=github_headers(state),
         )
         

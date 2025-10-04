@@ -28,33 +28,53 @@ async def run_check_usage(verbose: bool, show_token: bool):
     try:
         usage_data = await get_copilot_usage()
         
-        # Create a table to display usage information
-        table = Table(title="GitHub Copilot Usage")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
+        # Extract quota information (matching TypeScript implementation)
+        quota_snapshots = usage_data.get("quota_snapshots", {})
+        premium = quota_snapshots.get("premium_interactions", {})
+        chat = quota_snapshots.get("chat", {})
+        completions = quota_snapshots.get("completions", {})
         
-        # Add rows based on available data
-        if "total_suggestions_count" in usage_data:
-            table.add_row("Total Suggestions", str(usage_data["total_suggestions_count"]))
+        # Calculate premium usage
+        premium_total = premium.get("entitlement", 0)
+        premium_remaining = premium.get("remaining", 0)
+        premium_used = premium_total - premium_remaining
+        premium_percent_used = (premium_used / premium_total * 100) if premium_total > 0 else 0
+        premium_percent_remaining = premium.get("percent_remaining", 0)
         
-        if "total_acceptances_count" in usage_data:
-            table.add_row("Total Acceptances", str(usage_data["total_acceptances_count"]))
+        def summarize_quota(name: str, quota_data: dict) -> str:
+            """Summarize quota data similar to TypeScript version."""
+            if not quota_data:
+                return f"{name}: N/A"
+            
+            total = quota_data.get("entitlement", 0)
+            remaining = quota_data.get("remaining", 0)
+            used = total - remaining
+            percent_used = (used / total * 100) if total > 0 else 0
+            percent_remaining = quota_data.get("percent_remaining", 0)
+            
+            return f"{name}: {used}/{total} used ({percent_used:.1f}% used, {percent_remaining:.1f}% remaining)"
         
-        if "total_lines_suggested" in usage_data:
-            table.add_row("Total Lines Suggested", str(usage_data["total_lines_suggested"]))
+        # Format the output similar to TypeScript version
+        plan = usage_data.get("copilot_plan", "Unknown")
+        reset_date = usage_data.get("quota_reset_date", "Unknown")
         
-        if "total_lines_accepted" in usage_data:
-            table.add_row("Total Lines Accepted", str(usage_data["total_lines_accepted"]))
+        premium_line = f"Premium: {premium_used}/{premium_total} used ({premium_percent_used:.1f}% used, {premium_percent_remaining:.1f}% remaining)"
+        chat_line = summarize_quota("Chat", chat)
+        completions_line = summarize_quota("Completions", completions)
         
-        # Calculate acceptance rate if data is available
-        if "total_suggestions_count" in usage_data and "total_acceptances_count" in usage_data:
-            suggestions = usage_data["total_suggestions_count"]
-            acceptances = usage_data["total_acceptances_count"]
-            if suggestions > 0:
-                acceptance_rate = (acceptances / suggestions) * 100
-                table.add_row("Acceptance Rate", f"{acceptance_rate:.1f}%")
+        # Create a panel similar to the TypeScript box output
+        from rich.panel import Panel
         
-        console.print(table)
+        usage_content = (
+            f"Copilot Usage (plan: {plan})\n"
+            f"Quota resets: {reset_date}\n\n"
+            f"Quotas:\n"
+            f"  {premium_line}\n"
+            f"  {chat_line}\n"
+            f"  {completions_line}"
+        )
+        
+        console.print(Panel(usage_content, title="GitHub Copilot Usage", border_style="green"))
         
         if verbose:
             console.print("\n📊 Raw usage data:", style="yellow")
