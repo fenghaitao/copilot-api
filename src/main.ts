@@ -5,6 +5,7 @@ import { defineCommand, runMain } from "citty"
 import { auth } from "./auth"
 import { checkUsage } from "./check-usage"
 import { debug } from "./debug"
+import { initProxyFromEnv } from "./lib/proxy"
 import { start } from "./start"
 
 // Update gitignore to ignore python-port/dist/
@@ -16,5 +17,7 @@ const main = defineCommand({
   },
   subCommands: { auth, start, "check-usage": checkUsage, debug },
 })
+
+initProxyFromEnv()
 
 await runMain(main)
