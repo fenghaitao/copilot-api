@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "copilot-api"
+version = "0.5.14"
+description = "Turn GitHub Copilot into OpenAI/Anthropic API compatible server. Usable with Claude Code!"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["proxy", "github-copilot", "openai-compatible"]
+authors = [
+    {name = "Erick Christian", email = "erickchristian48@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pyperclip>=1.8.0",
+    "tiktoken>=0.5.0",
+    "aiofiles>=23.0.0",
+    "python-multipart>=0.0.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "types-requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ericc-ch/copilot-api"
+Repository = "https://github.com/ericc-ch/copilot-api.git"
+Issues = "https://github.com/ericc-ch/copilot-api/issues"
+
+[project.scripts]
+copilot-api = "copilot_api.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/copilot_api"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
