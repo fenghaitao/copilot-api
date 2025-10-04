@@ -7,6 +7,7 @@ import { checkUsage } from "./check-usage"
 import { debug } from "./debug"
 import { start } from "./start"
 
+// Update gitignore to ignore python-port/dist/
 const main = defineCommand({
   meta: {
     name: "copilot-api",
