@@ -9,8 +9,10 @@ Requirements:
     pip install requests
 
 Usage:
-    export GITHUB_TOKEN="your_github_token"
     python validate_copilot_simple.py
+    
+This script reads the GitHub token from ~/.config/copilot-api/github_token
+and exchanges it for a Copilot token using the copilot-api framework.
 """
 
 import os
@@ -18,6 +20,7 @@ import sys
 import json
 import time
 from typing import Optional, Dict, Any
+from pathlib import Path
 
 try:
     import requests
@@ -25,20 +28,56 @@ except ImportError:
     print("Error: requests is not installed. Install it with: pip install requests")
     sys.exit(1)
 
+# Add the src directory to Python path to import copilot_api
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-def get_api_key() -> str:
-    """Get GitHub API key from environment"""
-    api_key = os.getenv("GITHUB_TOKEN") or os.getenv("COPILOT_API_KEY")
-    if not api_key:
-        print("Error: GitHub API key not found.")
-        print("Please set one of these environment variables:")
-        print("  export GITHUB_TOKEN='your_token'")
-        print("  export COPILOT_API_KEY='your_token'")
+try:
+    from copilot_api.services.github.get_copilot_token import get_copilot_token
+    from copilot_api.services.get_vscode_version import get_vscode_version
+    from copilot_api.lib.state import State
+except ImportError as e:
+    print(f"Error: Failed to import copilot_api modules: {e}")
+    print("Make sure you're running this from the python-port directory")
+    sys.exit(1)
+
+
+async def get_copilot_api_key() -> tuple[str, str]:
+    """Get Copilot API key from GitHub token using copilot-api framework"""
+    github_token = os.getenv("GITHUB_TOKEN") or os.getenv("COPILOT_API_KEY")
+    
+    if not github_token:
+        config_path = os.path.expanduser("~/.config/copilot-api/github_token")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    github_token = f.read().strip()
+            except Exception as e:
+                print(f"Warning: Failed to read token from {config_path}: {e}")
+    
+    if not github_token:
+        print("Error: GitHub token not found.")
+        print("Please set GITHUB_TOKEN environment variable or")
+        print("ensure token exists at: ~/.config/copilot-api/github_token")
         sys.exit(1)
-    return api_key
+    
+    # Import state and set tokens
+    from copilot_api.lib.state import state
+    
+    # Set GitHub token in state
+    state.github_token = github_token
+    state.vscode_version = await get_vscode_version()
+    
+    # Exchange GitHub token for Copilot token using the state-aware function
+    try:
+        result = await get_copilot_token()
+        copilot_token = result["token"]
+        return copilot_token, state.vscode_version
+    except Exception as e:
+        print(f"Error: Failed to get Copilot token: {e}")
+        sys.exit(1)
 
 
-def list_models(api_key: str) -> list:
+def list_models(api_key: str, vscode_version: str) -> list:
     """List available GitHub Copilot models"""
     print("\n" + "="*80)
     print("FETCHING AVAILABLE MODELS")
@@ -47,7 +86,11 @@ def list_models(api_key: str) -> list:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Accept": "application/json",
-        "X-GitHub-Api-Version": "2025-05-01"
+        "X-GitHub-Api-Version": "2025-04-01",
+        "copilot-integration-id": "vscode-chat",
+        "editor-version": f"vscode/{vscode_version}",
+        "editor-plugin-version": "copilot-chat/0.26.7",
+        "user-agent": "GitHubCopilotChat/0.26.7",
     }
 
     try:
@@ -92,7 +135,7 @@ def list_models(api_key: str) -> list:
         return []
 
 
-def test_responses_api(api_key: str, model: str) -> Dict[str, Any]:
+def test_responses_api(api_key: str, vscode_version: str, model: str) -> Dict[str, Any]:
     """Test Responses API with caching"""
     print("\n" + "="*80)
     print(f"TESTING RESPONSES API: {model}")
@@ -101,7 +144,12 @@ def test_responses_api(api_key: str, model: str) -> Dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2025-05-01"
+        "X-GitHub-Api-Version": "2025-04-01",
+        "Editor-Version": "vscode/1.85.0",
+        "Copilot-Integration-Id": "vscode-chat",
+        "editor-version": f"vscode/{vscode_version}",
+        "editor-plugin-version": "copilot-chat/0.26.7",
+        "user-agent": "GitHubCopilotChat/0.26.7",
     }
 
     # Create a long system message that should be cached
@@ -118,7 +166,6 @@ def test_responses_api(api_key: str, model: str) -> Dict[str, Any]:
             {"role": "user", "content": "Say 'Hello' in exactly one word."}
         ],
         "max_output_tokens": 20,
-        "temperature": 0.7,
         "stream": False
     }
 
@@ -172,7 +219,6 @@ def test_responses_api(api_key: str, model: str) -> Dict[str, Any]:
                 {"role": "user", "content": "Now say 'World' in exactly one word."}
             ],
             "max_output_tokens": 20,
-            "temperature": 0.7,
             "stream": False
         }
 
@@ -260,7 +306,7 @@ def test_responses_api(api_key: str, model: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-def test_chat_completions_api(api_key: str, model: str) -> Dict[str, Any]:
+def test_chat_completions_api(api_key: str, vscode_version: str, model: str) -> Dict[str, Any]:
     """Test Chat Completions API (for comparison)"""
     print("\n" + "="*80)
     print(f"TESTING CHAT COMPLETIONS API: {model}")
@@ -269,7 +315,12 @@ def test_chat_completions_api(api_key: str, model: str) -> Dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2025-05-01"
+        "X-GitHub-Api-Version": "2025-04-01",
+        "Editor-Version": "vscode/1.85.0",
+        "Copilot-Integration-Id": "vscode-chat",
+        "editor-version": f"vscode/{vscode_version}",
+        "editor-plugin-version": "copilot-chat/0.26.7",
+        "user-agent": "GitHubCopilotChat/0.26.7",
     }
 
     payload = {
@@ -318,25 +369,23 @@ def test_chat_completions_api(api_key: str, model: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-def main():
-    """Main function"""
+async def async_main():
+    """Main async function"""
     print("\n" + "="*80)
     print("GITHUB COPILOT RESPONSES API VALIDATOR")
     print("Simple version - Direct API calls only")
     print("="*80)
 
-    # Get API key
-    api_key = get_api_key()
+    # Get Copilot API key from GitHub token
+    copilot_token, vscode_version = await get_copilot_api_key()
+    print(f"\n✓ Successfully obtained Copilot token")
+    print(f"  VS Code version: {vscode_version}")
 
     # List available models
-    models = list_models(api_key)
+    models = list_models(copilot_token, vscode_version)
 
-    # Test specific models
-    test_models = [
-        "gpt-4o",
-        "claude-3.5-sonnet",
-        "claude-3.7-sonnet"
-    ]
+    # Test only gpt-5-mini model
+    test_models = ["gpt-5-mini"]
 
     print("\n" + "="*80)
     print("TESTING MODELS")
@@ -350,10 +399,10 @@ def main():
         print('='*80)
 
         # Test Chat Completions API
-        chat_result = test_chat_completions_api(api_key, model)
+        chat_result = test_chat_completions_api(copilot_token, vscode_version, model)
 
         # Test Responses API
-        responses_result = test_responses_api(api_key, model)
+        responses_result = test_responses_api(copilot_token, vscode_version, model)
 
         results[model] = {
             "chat_completions": chat_result,
@@ -392,6 +441,12 @@ def main():
     print("="*80)
     print("VALIDATION COMPLETE")
     print("="*80 + "\n")
+
+
+def main():
+    """Main function wrapper"""
+    import asyncio
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":
