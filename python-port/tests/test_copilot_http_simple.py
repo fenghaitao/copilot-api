@@ -86,7 +86,7 @@ def list_models(api_key: str, vscode_version: str) -> list:
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Accept": "application/json",
-        "X-GitHub-Api-Version": "2025-04-01",
+        "X-GitHub-Api-Version": "2025-05-01",
         "copilot-integration-id": "vscode-chat",
         "editor-version": f"vscode/{vscode_version}",
         "editor-plugin-version": "copilot-chat/0.26.7",
@@ -144,7 +144,7 @@ def test_responses_api(api_key: str, vscode_version: str, model: str) -> Dict[st
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2025-04-01",
+        "X-GitHub-Api-Version": "2025-05-01",
         "Editor-Version": "vscode/1.85.0",
         "Copilot-Integration-Id": "vscode-chat",
         "editor-version": f"vscode/{vscode_version}",
@@ -315,7 +315,7 @@ def test_chat_completions_api(api_key: str, vscode_version: str, model: str) -> 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "X-GitHub-Api-Version": "2025-04-01",
+        "X-GitHub-Api-Version": "2025-05-01",
         "Editor-Version": "vscode/1.85.0",
         "Copilot-Integration-Id": "vscode-chat",
         "editor-version": f"vscode/{vscode_version}",

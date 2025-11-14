@@ -24,7 +24,7 @@ from pathlib import Path
 
 try:
     import litellm
-    from litellm import completion, responses
+    from litellm import completion, aresponses
 except ImportError:
     print("Error: litellm is not installed. Install it with: pip install litellm")
     sys.exit(1)
@@ -200,7 +200,7 @@ class CopilotResponsesAPIValidator:
             print(f"\n✗ Request failed: {e}")
             return {"success": False, "error": str(e)}
 
-    def test_responses_api(self, model: str = "gpt-4o") -> Dict[str, Any]:
+    async def test_responses_api(self, model: str = "gpt-4o") -> Dict[str, Any]:
         """
         Test the Responses API (with caching support) using LiteLLM
 
@@ -224,8 +224,8 @@ class CopilotResponsesAPIValidator:
             print("\n→ Making first request (no cache expected)...")
             start_time = time.time()
 
-            # Use LiteLLM responses API with GitHub Copilot
-            response = responses(
+            # Use LiteLLM async responses API with GitHub Copilot
+            response = await aresponses(
                 model=f"github_copilot/{model}",
                 input=input_messages,
                 custom_llm_provider="github_copilot",
@@ -286,7 +286,7 @@ class CopilotResponsesAPIValidator:
             print(f"  input: {second_input}")
 
             start_time = time.time()
-            response2 = responses(
+            response2 = await aresponses(
                 model=f"github_copilot/{model}",
                 input=second_input,
                 custom_llm_provider="github_copilot",
@@ -340,7 +340,7 @@ class CopilotResponsesAPIValidator:
             print(f"\n✗ Request failed: {e}")
             return {"success": False, "error": str(e)}
 
-    def validate_model(self, model: str) -> Dict[str, Any]:
+    async def validate_model(self, model: str) -> Dict[str, Any]:
         """
         Validate a specific model's API support
 
@@ -363,8 +363,8 @@ class CopilotResponsesAPIValidator:
         # Test Chat Completions API
         results["chat_completions"] = self.test_chat_completions_api(model)
 
-        # Test Responses API
-        results["responses_api"] = self.test_responses_api(model)
+        # Test Responses API (async)
+        results["responses_api"] = await self.test_responses_api(model)
 
         return results
 
@@ -427,7 +427,7 @@ async def async_main():
     results = {}
     for model in test_models:
         try:
-            results[model] = validator.validate_model(model)
+            results[model] = await validator.validate_model(model)
         except Exception as e:
             print(f"\n✗ Error testing {model}: {e}")
             results[model] = {"error": str(e)}
