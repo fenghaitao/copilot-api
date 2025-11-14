@@ -63,7 +63,9 @@ class CopilotResponsesAPIValidator:
         self.vscode_version = vscode_version
 
         # Configure LiteLLM
-        litellm.set_verbose = False
+        import os
+        os.environ['LITELLM_LOG'] = 'DEBUG'  # Enable debug logging
+        litellm.set_verbose = True  # Enable verbose logging to see API calls
 
     def list_available_models(self) -> list:
         """
@@ -149,12 +151,10 @@ class CopilotResponsesAPIValidator:
             start_time = time.time()
 
             response = completion(
-                model=f"github/{model}",
+                model=f"github_copilot/{model}",
                 messages=messages,
-                api_key=self.api_key,
-                api_base="https://api.githubcopilot.com",
-                max_tokens=50,
-                temperature=0.7,
+                max_tokens=5000,
+                temperature=1,
                 extra_headers={
                     "Editor-Version": "vscode/1.85.0",
                     "Copilot-Integration-Id": "vscode-chat",
@@ -165,6 +165,14 @@ class CopilotResponsesAPIValidator:
             )
 
             elapsed = time.time() - start_time
+
+            # Debug: Print the raw response object
+            print(f"\n[DEBUG] Raw response object:")
+            print(f"  Type: {type(response)}")
+            print(f"  Dir: {dir(response)}")
+            print(f"  Response: {response}")
+            if hasattr(response, '__dict__'):
+                print(f"  __dict__: {response.__dict__}")
 
             result = {
                 "success": True,
@@ -218,7 +226,7 @@ class CopilotResponsesAPIValidator:
 
             # Use LiteLLM responses API with GitHub Copilot
             response = responses(
-                model=model,
+                model=f"github_copilot/{model}",
                 input=input_messages,
                 custom_llm_provider="github_copilot",
                 max_output_tokens=50,
@@ -232,6 +240,14 @@ class CopilotResponsesAPIValidator:
             )
 
             elapsed = time.time() - start_time
+
+            # Debug: Print the raw response object
+            print(f"\n[DEBUG] Raw responses() object:")
+            print(f"  Type: {type(response)}")
+            print(f"  Dir: {dir(response)}")
+            print(f"  Response: {response}")
+            if hasattr(response, '__dict__'):
+                print(f"  __dict__: {response.__dict__}")
 
             result = {
                 "success": True,
@@ -253,6 +269,7 @@ class CopilotResponsesAPIValidator:
             print(f"  Response ID: {result['response_id']}")
             print(f"  Model: {result['model']}")
             print(f"  Output items: {len(result['output'])}")
+            print(f"  Output: {result['output']}")
             print(f"  Tokens: {result['usage']['input_tokens']} input + {result['usage']['output_tokens']} output = {result['usage']['total_tokens']} total")
             print(f"  Cached tokens: {cached_tokens}")
             print(f"  Time: {elapsed:.2f}s")
@@ -263,9 +280,14 @@ class CopilotResponsesAPIValidator:
                 {"role": "user", "content": "Now say 'Cached response works' in exactly 3 words."}
             ]
 
+            print(f"\n[DEBUG] Second request parameters:")
+            print(f"  model: github_copilot/{model}")
+            print(f"  previous_response_id: {result['response_id']}")
+            print(f"  input: {second_input}")
+
             start_time = time.time()
             response2 = responses(
-                model=model,
+                model=f"github_copilot/{model}",
                 input=second_input,
                 custom_llm_provider="github_copilot",
                 max_output_tokens=50,
@@ -280,10 +302,24 @@ class CopilotResponsesAPIValidator:
             )
             elapsed2 = time.time() - start_time
 
+            # Debug: Print the second response object
+            print(f"\n[DEBUG] Second responses() object:")
+            print(f"  Type: {type(response2)}")
+            print(f"  Response: {response2}")
+            if hasattr(response2, '__dict__'):
+                print(f"  __dict__: {response2.__dict__}")
+            
+            # Check if there's a _hidden_params or raw response
+            if hasattr(response2, '_hidden_params'):
+                print(f"  _hidden_params: {response2._hidden_params}")
+            if hasattr(response2.usage, '__dict__'):
+                print(f"  usage.__dict__: {response2.usage.__dict__}")
+
             cached_tokens2 = getattr(getattr(response2.usage, "input_tokens_details", None), "cached_tokens", 0) if hasattr(response2.usage, "input_tokens_details") else 0
 
             print(f"\n✓ Second request successful")
             print(f"  Response ID: {response2.id}")
+            print(f"  Output: {response2.output}")
             print(f"  Tokens: {response2.usage.input_tokens} input + {response2.usage.output_tokens} output")
             print(f"  Cached tokens: {cached_tokens2}")
             print(f"  Time: {elapsed2:.2f}s")
