@@ -174,7 +174,7 @@ class CopilotResponsesAPIValidator:
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens,
-                    "cached_tokens": getattr(getattr(response.usage, "prompt_tokens_details", None), "cached_tokens", 0) if hasattr(response.usage, "prompt_tokens_details") else 0
+                    "cached_tokens": getattr(getattr(response.usage, "input_tokens_details", None), "cached_tokens", 0) if hasattr(response.usage, "input_tokens_details") else 0
                 },
                 "elapsed_time": elapsed
             }
