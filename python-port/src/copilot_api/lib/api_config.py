@@ -61,6 +61,6 @@ def github_headers(state: State) -> Dict[str, str]:
         "editor-version": f"vscode/{state.vscode_version}",
         "editor-plugin-version": EDITOR_PLUGIN_VERSION,
         "user-agent": USER_AGENT,
-        "x-github-api-version": API_VERSION,
+        "x-github-api-version": "2022-11-28",  # Use supported version for GitHub REST API
         "x-vscode-user-agent-library-version": "electron-fetch",
     }
